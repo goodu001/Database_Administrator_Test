@@ -1,0 +1,142 @@
+Enum address_type {
+  ID_CARD
+  CURRENT
+  MAILING
+}
+
+Enum contact_method_type {
+  MOBILE
+  EMAIL
+  LINE
+}
+
+Enum membership_status {
+  ACTIVE
+  RESIGNED
+  ADDED
+}
+
+Table person {
+  person_id bigint [primary key]
+  first_name varchar [not null]
+  last_name varchar  [not null]
+  gender varchar      [note: 'M/F/Other or local code']
+  birth_date date
+  created_at timestamp
+  updated_at timestamp
+  Note: 'ข้อมูลกรรมการ (บุคคล) ใช้ surrogate key'
+}
+
+Table address {
+  address_id bigint [primary key]
+  person_id bigint  [not null]
+  type address_type [not null, note: 'ID_CARD | CURRENT | MAILING']
+  line1 varchar     [not null]
+  line2 varchar
+  subdistrict varchar
+  district varchar
+  province varchar
+  postal_code varchar
+  is_active boolean
+  valid_from date
+  valid_to date
+  created_at timestamp
+
+  indexes {
+    (person_id)
+    (person_id, type, is_active) [name: 'ux_person_addr_type_active']  // บังคับไม่ให้มีที่อยู่ประเภทเดียวกันซ้ำซ้อน (เชิงตรรกะ)
+  }
+
+  Note: 'รองรับหลายประเภทที่อยู่/เก็บประวัติช่วงเวลาได้'
+}
+
+Table contact_method {
+  contact_id bigint [primary key]
+  person_id bigint  [not null]
+  method contact_method_type [not null, note: 'MOBILE | EMAIL | LINE']
+  value varchar    [not null, note: 'เบอร์/อีเมล/ไอดีไลน์']
+  is_primary boolean
+  created_at timestamp
+
+  indexes {
+    (person_id)
+    (person_id, method, is_primary)
+  }
+}
+
+Table health_interest {
+  interest_id bigint [primary key]
+  interest_name varchar [not null, unique]
+  Note: 'เช่น อาหาร, ออกกำลังกาย, เหล้า, บุหรี่, อื่นๆ'
+}
+
+Table person_interest {
+  person_id bigint   [not null]
+  interest_id bigint [not null]
+  noted_at timestamp
+  note text
+
+  indexes {
+    (person_id, interest_id) [unique, name: 'ux_person_interest']
+    (interest_id)
+  }
+
+  Note: 'ตารางเชื่อม N:M ระหว่าง person ↔ health_interest'
+}
+
+Table committee {
+  committee_id bigint [primary key]
+  committee_name varchar [not null]
+  description text
+  Note: 'เช่น คณะกรรมการบริหารแผน คณะที่ 1'
+}
+
+Table appointment_order {
+  order_id bigint [primary key]
+  committee_id bigint [not null]
+  order_name varchar [not null]
+  effective_from date [not null]
+  effective_to   date [not null]
+
+  indexes {
+    (committee_id)
+    (committee_id, effective_from, effective_to)
+  }
+
+  Note: 'คำสั่งแต่งตั้งของคณะ: มีช่วงวันที่มีผลและวันที่สิ้นสุดของ “ชุดคำสั่ง”'
+}
+
+Table order_membership {
+  order_id bigint  [not null]
+  person_id bigint [not null]
+  member_effective_from date [not null]
+  member_effective_to   date
+  status membership_status [not null, note: 'ACTIVE | RESIGNED | ADDED']
+  remark text
+  created_at timestamp
+
+  indexes {
+    (order_id, person_id, member_effective_from) [pk, name: 'pk_order_membership'] // composite PK
+    (person_id)
+    (order_id, status)
+  }
+
+  Note: 'การเป็นสมาชิกตามคำสั่ง (สามารถลาออก/แต่งตั้งเพิ่มระหว่างคำสั่งได้); ช่วงสมาชิกต้องอยู่ในกรอบช่วงของคำสั่ง และวันที่สิ้นสุดของ “ชุดคำสั่ง” ไม่เปลี่ยน'
+}
+
+// -------------------- Relationships --------------------
+
+// บุคคล 1 — N ที่อยู่ / วิธีติดต่อ
+Ref: address.person_id > person.person_id
+Ref: contact_method.person_id > person.person_id
+
+// ความสนใจด้านสุขภาพ N — M
+Ref: person_interest.person_id > person.person_id
+Ref: person_interest.interest_id > health_interest.interest_id
+
+// คณะ 1 — N คำสั่งแต่งตั้ง
+Ref: appointment_order.committee_id > committee.committee_id
+
+// สมาชิกภาพตามคำสั่ง: คำสั่ง N — M บุคคล (ผ่าน order_membership)
+Ref: order_membership.order_id  > appointment_order.order_id
+Ref: order_membership.person_id > person.person_id
