@@ -1,0 +1,11 @@
+Table Name,Column Name,Description,Data Type,Constraint Type,Reference Table,Reference Column,Value Description,"remark(public, personal)"
+dim_person,person_id,รหัสบุคคล (กรรมการ),int,"PK, Identity",,,,public
+dim_person,title_th,คำนำหน้าชื่อ (ไทย),nvarchar(20),,,,,personal
+dim_person,first_name_th,ชื่อ (ไทย),nvarchar(100),NOT NULL,,,,personal
+dim_person,last_name_th,นามสกุล (ไทย),nvarchar(100),NOT NULL,,,,personal
+dim_person,first_name_en,ชื่อ (อังกฤษ),nvarchar(100),,,,,personal
+dim_person,last_name_en,นามสกุล (อังกฤษ),nvarchar(100),,,,,personal
+dim_person,gender,เพศ,gender_code,,,,M/F/X/U,personal
+dim_person,birth_date,วันเกิด,date,,,,YYYY-MM-DD,personal
+dim_person,created_at,วันที่สร้าง,datetime2,"NOT NULL, DEFAULT 'now()'",,,,public
+dim_person,updated_at,วันที่แก้ไขล่าสุด,datetime2,"NOT NULL, DEFAULT 'now()'",,,,public
